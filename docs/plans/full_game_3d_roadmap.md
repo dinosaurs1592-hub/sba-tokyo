@@ -1,34 +1,165 @@
-# SBA Tokyo 3D Roadmap
+# SBA Tokyo 完成ロードマップ
 
-## Direction
+## ゲームのビジョン
 
-The prototype remains intentionally simple, but the production target is a full 3D mobile runner. All prototype systems should stay compatible with a character viewed in perspective, lane-based world geometry, and authored 3D chunks.
+東京の街を舞台にした3Dモバイル無限ランナー。スピードを維持しながら着地タイミングを合わせ、コンボを繋ぎ続ける緊張感がコアバリュー。
 
-## Phase 1: Prototype Validation
+---
 
-- validate lane readability in perspective view
-- validate push-to-maintain-speed loop
-- validate obstacle timing and restart loop
+## フェーズ構成
 
-## Phase 2: SBA Tokyo Core
+```
+フェーズ1: プロトタイプ検証   ✅ 完了
+フェーズ2: SBA Tokyo コア    🔄 着手中
+フェーズ3: 3D プロダクション  ⬜ 未着手
+```
 
-- introduce landing windows
-- split surfaces into `Ground`, `Object`, and `Rail`
-- add jump and slide-jump behavior
-- add combo continuation rules
+---
 
-## Phase 3: 3D Production Layer
+## フェーズ1: プロトタイプ検証 ✅
 
-- replace primitive shapes with modular 3D environment kits
-- author urban road chunks, vehicles, rails, and skyline props
-- move camera from prototype follow to polished chase camera
-- add animation controller, VFX, and motion-driven feedback
+**目標:** コアループの体感を最小構成で確認する。
 
-## Technical Rule
+| マイルストーン | 内容 | 状態 |
+|---|---|---|
+| M1 | プロジェクト作成・フォルダ構成・コンパイル確認 | ✅ |
+| M2 | シーン構築・レーン移動・スピード更新確認 | ✅ |
+| M3 | モバイルスワイプ入力・プッシュタイミング調整 | ✅ |
+| M4 | PlayerState 導入・サーフェス型定義・着地基盤実装 | ✅ |
 
-Prototype code should avoid assumptions that only fit a 2D game. Systems should prefer:
+**残課題（フェーズ2 M5 で対処）:**
+- 着地ウィンドウの視覚フィードバックなし
+- チャンク生成なし（ランダム単障害物）
+- オーディオなし
 
-- world-space lanes instead of 2D transforms
-- explicit surface metadata
-- state-based movement logic
-- reusable 3D chunk-friendly spawning
+---
+
+## フェーズ2: SBA Tokyo コア 🔄
+
+**目標:** ゲームとして成立させる。着地・コンボ・チャンクを完成させる。
+
+### M5: 着地ウィンドウ 視覚フィードバック
+
+**目的:** 「今が入力タイミング」を見せる。フェーズ1の最大の未完要素。
+
+**作業:**
+- `PrototypeGameManager` に `LandingSuccess` / `LandingFailed` / `PerfectLanding` イベント追加
+- `PrototypeHUD` に画面エッジフラッシュ（白: 通常 / ゴールド: Perfect）
+- コンボ数字のバウンス・ブレイクアニメーション
+
+**完了基準:**
+- [ ] 着地ウィンドウ開放が視覚的に確認できる
+- [ ] Perfect と通常の区別が画面で分かる
+- [ ] `PlayerState.LandingWindow` 時に HUD が反応する
+
+---
+
+### M6: スライドメカニクス
+
+**目的:** 空中での下スワイプを着地アクションとして機能させる。
+
+**作業:**
+- `PrototypeInputManager`: 空中判定フラグを `PrototypeGameManager.CurrentState` から取得
+- `PrototypeRunnerController`: 空中の下スワイプ入力を `Swipe` バッファとして処理
+- Object 面着地時のスライドを失敗として評価（既存ロジックで対応済み）
+
+**完了基準:**
+- [ ] 空中で下スワイプ → Ground / Rail に Swipe 着地で成功
+- [ ] 空中で下スワイプ → Object に着地で失敗（コンボリセット）
+
+---
+
+### M7: 難易度スケーリング
+
+**目的:** 距離に応じた緊張感の上昇。
+
+**作業:**
+- `PrototypeGameManager` に `DifficultyLevel` プロパティ追加（距離から算出）
+- 速度減衰・障害物密度をレベルに応じて補正
+- HUD に難易度段階の表示（任意）
+
+**完了基準:**
+- [ ] 200 m 超で体感難易度が上がる
+- [ ] 500 m 超で明確にシビアになる
+
+---
+
+### M8: チャンク式レベル生成
+
+**目的:** ランダム単障害物を、意図されたパターンに置き換える。
+
+**作業:**
+- `ChunkSpawner` クラスを新規作成（`ObstacleSpawner` を置き換え）
+- チャンクプレハブ5種を作成（`ChunkFlat` / `ChunkObstacleRun` / `ChunkRailSection` / `ChunkObjectPlatform` / `ChunkMixed`）
+- チャンク内に `PrototypeSurface` コンポーネント付きオブジェクトを配置
+- `RunReset` イベントでチャンクをリセット
+
+**完了基準:**
+- [ ] レール区間でグラインドが発生する
+- [ ] オブジェクト面へのジャンプが機能する
+- [ ] チャンクが途切れなく繋がる
+
+---
+
+### M9: オーディオ基盤
+
+**目的:** 音でゲームフィールを強化する。
+
+**作業:**
+- `AudioManager` シングルトン作成
+- 基本 SFX の用意と登録（プッシュ・着地成功/失敗/Perfect・コンボ・ゲームオーバー）
+- `PrototypeGameManager` イベントを購読
+
+**完了基準:**
+- [ ] 着地成否が音で分かる
+- [ ] コンボ継続に応じてピッチが変化する
+
+---
+
+## フェーズ3: 3D プロダクション ⬜
+
+**目標:** プロトタイプの骨格に3Dビジュアルとポリッシュを乗せ、リリース品質に仕上げる。
+
+### M10: 3D 環境アセット
+
+- モジュラー道路チャンク（直線・カーブ）
+- 建物・車・信号・レールなどの東京ストリートプロップ
+- スカイライン背景
+- プリミティブをすべてアセットに置き換え
+
+### M11: キャラクターとアニメーション
+
+- キャラクターモデルの導入
+- `Animator` コントローラー（走る・ジャンプ・グラインド・着地・ゲームオーバー）
+- `PrototypeRunnerController` の `PlayerState` に応じてアニメーション切り替え
+
+### M12: VFX とカメラポリッシュ
+
+- スピードライン（速度に応じた強度）
+- 着地フラッシュ（パーティクル）
+- グラインドスパーク
+- チェイスカメラにモーションブラー・ダイナミック FOV の洗練
+- コンボ時のカメラシェイク強化
+
+### M13: UI / メニュー
+
+- タイトル画面
+- ゲームオーバー画面（スコア・最高記録・リトライ）
+- ハイスコア永続化（`PlayerPrefs`）
+- HUD のビジュアルポリッシュ
+
+### M14: モバイル最適化とリリース準備
+
+- iOS / Android ビルド設定
+- 60fps 動作確認（低スペック端末）
+- タッチ操作の最終調整
+- アプリアイコン・スプラッシュ画面
+
+---
+
+## 技術ルール（全フェーズ共通）
+
+- `PlayerState` / `PrototypeSurfaceType` / `PrototypeLandingActionType` の既存値は変更禁止
+- `SerializeField` の値はコードにハードコードしない（Inspector で管理）
+- 新しいチャンクや面タイプは既存のフレームワークを拡張する形で追加する
+- すべての実装は `docs/contracts/` に契約書を作成してから着手する
