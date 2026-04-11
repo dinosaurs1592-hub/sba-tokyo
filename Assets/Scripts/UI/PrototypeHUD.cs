@@ -1,4 +1,5 @@
 using SBATokyo.Prototype.Core;
+using SBATokyo.Prototype.Gameplay;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -12,6 +13,7 @@ namespace SBATokyo.Prototype.UI
         [SerializeField] private Text stateText;
         [SerializeField] private Text comboHintText;
         [SerializeField] private Text diagnosticsText;
+        [SerializeField] private Text warningText;
         [SerializeField] private Slider speedSlider;
 
         private void Update()
@@ -33,19 +35,28 @@ namespace SBATokyo.Prototype.UI
 
             if (stateText != null)
             {
-                stateText.text = gameManager.IsGameOver ? "GAME OVER | Press R to restart" : "A/D or swipe sideways to change lanes";
+                stateText.text = gameManager.IsGameOver
+                    ? "GAME OVER | Press R to restart"
+                    : $"State: {gameManager.CurrentState} | Surface: {gameManager.CurrentSurfaceType}";
             }
 
             if (comboHintText != null)
             {
                 comboHintText.text = gameManager.IsGameOver
                     ? "Prototype reset ready"
-                    : "S/down push | Space/up jump | Enter tap | F rail trick";
+                    : gameManager.LastRuleMessage;
             }
 
             if (diagnosticsText != null)
             {
-                diagnosticsText.text = $"State: {gameManager.CurrentState} | Speed Ratio: {gameManager.CurrentSpeed / gameManager.MaxSpeed:0.00}";
+                diagnosticsText.text =
+                    $"Controls: A/D lane | S push | Space jump | Enter tap | F trick | Window: {gameManager.LandingWindowRemaining:0.00}s | Speed Ratio: {gameManager.CurrentSpeed / gameManager.MaxSpeed:0.00}";
+            }
+
+            if (warningText != null)
+            {
+                warningText.text = "Traffic clear";
+                warningText.color = new Color(0.2f, 0.24f, 0.28f);
             }
 
             if (speedSlider != null)
@@ -55,5 +66,6 @@ namespace SBATokyo.Prototype.UI
                 speedSlider.value = gameManager.CurrentSpeed;
             }
         }
+
     }
 }
