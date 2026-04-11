@@ -46,7 +46,7 @@ PrototypeInputManager  →  events  →  PrototypeRunnerController
 PrototypeRunnerController  →  PrototypeGameManager.RegisterLandingResult()
                            →  PrototypeGameManager.SetState()
 
-PrototypeGameManager  →  events (RunReset, GameOverTriggered)  →  ObstacleSpawner, HUD
+PrototypeGameManager  →  events (RunReset, GameOverTriggered)  →  ChunkSpawner, HUD
 ```
 
 `PrototypeGameManager` owns all authoritative game state (speed, score, combo, `PlayerState`).  
@@ -57,7 +57,7 @@ These two never call each other's setters except through the defined public API.
 
 - **Landing window**: `PrototypeRunnerController` buffers a `PrototypeLandingActionType` pre-jump and passes it with `elapsedSinceLanding` to `GameManager.RegisterLandingResult()` on landing. The manager decides success based on surface type.
 - **Surface typing**: `PrototypeSurface` component on scene objects carries a `PrototypeSurfaceType`. `RunnerController` reads it via downward raycast (`ProbeGround`). Rail surfaces pause speed decay and set `PlayerState.Grinding`.
-- **Object pooling**: `ObstacleSpawner` maintains a fixed pool of 12 obstacles, recycled by Z position. Reset via `RunReset` event.
+- **Chunk pooling**: `ChunkSpawner` pools pre-designed chunk prefabs (ChunkFlat, ChunkObstacleRun, ChunkRailSection, ChunkObjectPlatform, ChunkMixed). Each chunk is managed by `ChunkController`. Reset via `RunReset` event.
 - **Speed decay**: passive decay starts after `idleDecayDelay` seconds of no push. Rails pause decay. Game over when speed reaches 0.
 
 ### Forward-compatibility notes (do not remove)
