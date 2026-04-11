@@ -115,7 +115,6 @@ namespace SBATokyo.Prototype.Editor
             SetObjectReference(cameraFollow, "target", player.transform);
             SetObjectReference(cameraFollow, "gameManager", gameManager);
 
-            CreateRoad();
             CreateLaneMarkers();
             CreateLaneDashLines();
             CreateRoadEdgeLines();
