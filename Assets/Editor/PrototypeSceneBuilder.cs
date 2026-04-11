@@ -521,8 +521,8 @@ namespace SBATokyo.Prototype.Editor
         private static GameObject CreateCarObstaclePrefab()
         {
             var root = new GameObject("ObstaclePrefab");
-            var obstacle = root.AddComponent<PrototypeObstacle>();
             var collider = root.AddComponent<BoxCollider>();
+            var obstacle = root.AddComponent<PrototypeObstacle>();
             collider.center = new Vector3(0f, 0.65f, 0f);
             collider.size = new Vector3(1.8f, 1.3f, 3f);
 
