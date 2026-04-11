@@ -115,10 +115,6 @@ namespace SBATokyo.Prototype.Editor
             SetObjectReference(cameraFollow, "target", player.transform);
             SetObjectReference(cameraFollow, "gameManager", gameManager);
 
-            CreateLaneMarkers();
-            CreateLaneDashLines();
-            CreateRoadEdgeLines();
-            CreateRoadBorders();
             CreateRoadsidePosts();
             CreateCityBackdrop();
             CreateDirectionalLight();
@@ -488,13 +484,62 @@ namespace SBATokyo.Prototype.Editor
 
         private static void AddChunkGround(Transform chunkTransform)
         {
+            const float len = 36f;
+            const float half = len * 0.5f;
+
             var ground = GameObject.CreatePrimitive(PrimitiveType.Cube);
             ground.name = "Ground";
             ground.transform.SetParent(chunkTransform, false);
-            ground.transform.localPosition = new Vector3(0f, -0.1f, 18f);
-            ground.transform.localScale = new Vector3(10.5f, 0.2f, 36f);
+            ground.transform.localPosition = new Vector3(0f, -0.1f, half);
+            ground.transform.localScale = new Vector3(10.5f, 0.2f, len);
             ground.AddComponent<PrototypeSurface>();
             ground.GetComponent<Renderer>().sharedMaterial = CreateMaterial("Ground_Mat", new Color(0.17f, 0.19f, 0.23f));
+
+            // Lane markers (visual only — no collider)
+            for (int lane = -1; lane <= 1; lane++)
+            {
+                var marker = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                marker.transform.SetParent(chunkTransform, false);
+                marker.transform.localPosition = new Vector3(lane * 3f, 0.025f, half);
+                marker.transform.localScale = new Vector3(0.12f, 0.05f, len);
+                marker.GetComponent<Renderer>().sharedMaterial = CreateMaterial(
+                    lane == 0 ? "LaneCenter_Mat" : "LaneSide_Mat",
+                    lane == 0 ? new Color(0.32f, 0.82f, 0.95f) : new Color(0.28f, 0.3f, 0.35f));
+                Object.DestroyImmediate(marker.GetComponent<Collider>());
+            }
+
+            // Lane dividers (visual only)
+            for (int side = -1; side <= 1; side += 2)
+            {
+                var div = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                div.transform.SetParent(chunkTransform, false);
+                div.transform.localPosition = new Vector3(side * 1.5f, 0.03f, half);
+                div.transform.localScale = new Vector3(0.2f, 0.03f, len);
+                div.GetComponent<Renderer>().sharedMaterial = CreateMaterial("LaneDash_Mat", new Color(0.94f, 0.94f, 0.9f));
+                Object.DestroyImmediate(div.GetComponent<Collider>());
+            }
+
+            // Road edge lines (visual only)
+            for (int side = -1; side <= 1; side += 2)
+            {
+                var edge = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                edge.transform.SetParent(chunkTransform, false);
+                edge.transform.localPosition = new Vector3(side * 4.2f, 0.03f, half);
+                edge.transform.localScale = new Vector3(0.18f, 0.04f, len);
+                edge.GetComponent<Renderer>().sharedMaterial = CreateMaterial("RoadEdgeLine_Mat", new Color(0.97f, 0.97f, 0.94f));
+                Object.DestroyImmediate(edge.GetComponent<Collider>());
+            }
+
+            // Road borders (keep collider to block lateral escape)
+            for (int side = -1; side <= 1; side += 2)
+            {
+                var border = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                border.name = side < 0 ? "RoadBorder_Left" : "RoadBorder_Right";
+                border.transform.SetParent(chunkTransform, false);
+                border.transform.localPosition = new Vector3(side * 5f, 0.55f, half);
+                border.transform.localScale = new Vector3(0.45f, 1.1f, len);
+                border.GetComponent<Renderer>().sharedMaterial = CreateMaterial("RoadBorder_Mat", new Color(0.85f, 0.31f, 0.24f));
+            }
         }
 
         private static void AddObstacleToChunk(Transform chunkTransform, float laneX, float localZ)
