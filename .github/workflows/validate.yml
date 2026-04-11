@@ -1,0 +1,58 @@
+name: Validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ドキュメント構成チェック
+        run: |
+          echo "=== 必須ファイルの存在確認 ==="
+          for f in CLAUDE.md AGENTS.md docs/specs/prototype_gdd.md docs/plans/prototype_plan.md; do
+            if [ -f "$f" ]; then
+              echo "✓ $f"
+            else
+              echo "✗ $f が見つかりません"
+              exit 1
+            fi
+          done
+
+      - name: 前方互換の契約チェック
+        run: |
+          echo "=== PlayerState 既存値の確認 ==="
+          for value in Running Airborne Grinding LandingWindow GameOver; do
+            if grep -q "$value" Assets/Scripts/Core/PlayerState.cs; then
+              echo "✓ PlayerState.$value"
+            else
+              echo "✗ PlayerState.$value が削除されています"
+              exit 1
+            fi
+          done
+
+          echo "=== PrototypeSurfaceType 既存値の確認 ==="
+          for value in Ground Object Rail Obstacle; do
+            if grep -q "$value" Assets/Scripts/Gameplay/PrototypeSurfaceType.cs; then
+              echo "✓ PrototypeSurfaceType.$value"
+            else
+              echo "✗ PrototypeSurfaceType.$value が削除されています"
+              exit 1
+            fi
+          done
+
+      - name: SerializeField ハードコードチェック
+        run: |
+          echo "=== magic number の直書き確認 ==="
+          # startSpeed, maxSpeed 等の数値がスクリプト本体にハードコードされていないか
+          # GameManager 以外のファイルで速度定数が使われていないか確認
+          if grep -rn "= 8f\|= 20f\|= 2f" Assets/Scripts/Gameplay/ Assets/Scripts/UI/ 2>/dev/null | grep -v "\.meta"; then
+            echo "警告: Gameplay/UI スクリプトに速度系の magic number が含まれている可能性があります"
+          else
+            echo "✓ magic number チェック通過"
+          fi
