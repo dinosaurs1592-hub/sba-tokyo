@@ -122,17 +122,14 @@ namespace SBATokyo.Prototype.Editor
             CreateRoadBorders();
             CreateRoadsidePosts();
             CreateCityBackdrop();
-            CreateInteractiveSurfaces();
             CreateDirectionalLight();
 
-            var spawnerObject = new GameObject("ObstacleSpawner");
-            var spawner = spawnerObject.AddComponent<ObstacleSpawner>();
+            var chunkTemplates = CreateChunkTemplates();
+            var spawnerObject = new GameObject("ChunkSpawner");
+            var spawner = spawnerObject.AddComponent<ChunkSpawner>();
             SetObjectReference(spawner, "gameManager", gameManager);
             SetObjectReference(spawner, "runner", player.transform);
-
-            var obstaclePrefab = CreateCarObstaclePrefab();
-            obstaclePrefab.SetActive(false);
-            SetObjectReference(spawner, "obstaclePrefab", obstaclePrefab);
+            SetObjectReferenceArray(spawner, "chunkPrefabs", chunkTemplates);
 
             CreateHud(gameManager);
 
@@ -384,23 +381,141 @@ namespace SBATokyo.Prototype.Editor
             horizon.GetComponent<Renderer>().sharedMaterial = CreateMaterial("Horizon_Mat", new Color(0.74f, 0.79f, 0.86f));
         }
 
-        private static void CreateInteractiveSurfaces()
+        private static GameObject[] CreateChunkTemplates()
         {
-            var objectPlatform = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            objectPlatform.name = "ObjectPlatform";
-            objectPlatform.transform.position = new Vector3(0f, 0.55f, 55f);
-            objectPlatform.transform.localScale = new Vector3(2.3f, 0.9f, 3.4f);
-            var objectSurface = objectPlatform.AddComponent<PrototypeSurface>();
-            SetEnum(objectSurface, "surfaceType", 1);
-            objectPlatform.GetComponent<Renderer>().sharedMaterial = CreateMaterial("ObjectPlatform_Mat", new Color(0.86f, 0.46f, 0.18f));
+            var root = new GameObject("ChunkTemplates");
+            var chunks = new GameObject[]
+            {
+                CreateChunkFlat(root.transform),
+                CreateChunkObstacleRun(root.transform),
+                CreateChunkRailSection(root.transform),
+                CreateChunkObjectPlatform(root.transform),
+                CreateChunkMixed(root.transform),
+            };
+
+            foreach (var c in chunks)
+            {
+                c.SetActive(false);
+            }
+
+            return chunks;
+        }
+
+        private static GameObject CreateChunkFlat(Transform parent)
+        {
+            var chunk = new GameObject("ChunkFlat");
+            chunk.transform.SetParent(parent, false);
+            var controller = chunk.AddComponent<ChunkController>();
+            SetFloat(controller, "chunkLength", 36f);
+            return chunk;
+        }
+
+        private static GameObject CreateChunkObstacleRun(Transform parent)
+        {
+            var chunk = new GameObject("ChunkObstacleRun");
+            chunk.transform.SetParent(parent, false);
+            var controller = chunk.AddComponent<ChunkController>();
+            SetFloat(controller, "chunkLength", 36f);
+
+            AddObstacleToChunk(chunk.transform, -3f, 10f);
+            AddObstacleToChunk(chunk.transform, 3f, 22f);
+            AddObstacleToChunk(chunk.transform, 0f, 30f);
+            return chunk;
+        }
+
+        private static GameObject CreateChunkRailSection(Transform parent)
+        {
+            var chunk = new GameObject("ChunkRailSection");
+            chunk.transform.SetParent(parent, false);
+            var controller = chunk.AddComponent<ChunkController>();
+            SetFloat(controller, "chunkLength", 36f);
 
             var rail = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            rail.name = "RailStrip";
-            rail.transform.position = new Vector3(-3f, 0.4f, 95f);
-            rail.transform.localScale = new Vector3(0.5f, 0.08f, 24f);
+            rail.name = "Rail";
+            rail.transform.SetParent(chunk.transform, false);
+            rail.transform.localPosition = new Vector3(0f, 0.4f, 18f);
+            rail.transform.localScale = new Vector3(2.5f, 0.08f, 30f);
             var railSurface = rail.AddComponent<PrototypeSurface>();
             SetEnum(railSurface, "surfaceType", 2);
             rail.GetComponent<Renderer>().sharedMaterial = CreateMaterial("Rail_Mat", new Color(0.58f, 0.85f, 0.95f));
+            return chunk;
+        }
+
+        private static GameObject CreateChunkObjectPlatform(Transform parent)
+        {
+            var chunk = new GameObject("ChunkObjectPlatform");
+            chunk.transform.SetParent(parent, false);
+            var controller = chunk.AddComponent<ChunkController>();
+            SetFloat(controller, "chunkLength", 36f);
+
+            var platform = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            platform.name = "Platform";
+            platform.transform.SetParent(chunk.transform, false);
+            platform.transform.localPosition = new Vector3(0f, 0.55f, 18f);
+            platform.transform.localScale = new Vector3(2.3f, 0.9f, 6f);
+            var platformSurface = platform.AddComponent<PrototypeSurface>();
+            SetEnum(platformSurface, "surfaceType", 1);
+            platform.GetComponent<Renderer>().sharedMaterial = CreateMaterial("ObjectPlatform_Mat", new Color(0.86f, 0.46f, 0.18f));
+
+            AddObstacleToChunk(chunk.transform, -3f, 12f);
+            AddObstacleToChunk(chunk.transform, 3f, 12f);
+            return chunk;
+        }
+
+        private static GameObject CreateChunkMixed(Transform parent)
+        {
+            var chunk = new GameObject("ChunkMixed");
+            chunk.transform.SetParent(parent, false);
+            var controller = chunk.AddComponent<ChunkController>();
+            SetFloat(controller, "chunkLength", 36f);
+
+            var rail = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            rail.name = "Rail";
+            rail.transform.SetParent(chunk.transform, false);
+            rail.transform.localPosition = new Vector3(0f, 0.4f, 18f);
+            rail.transform.localScale = new Vector3(2.5f, 0.08f, 20f);
+            var railSurface = rail.AddComponent<PrototypeSurface>();
+            SetEnum(railSurface, "surfaceType", 2);
+            rail.GetComponent<Renderer>().sharedMaterial = CreateMaterial("Rail_Mat", new Color(0.58f, 0.85f, 0.95f));
+
+            AddObstacleToChunk(chunk.transform, -3f, 8f);
+            AddObstacleToChunk(chunk.transform, 3f, 26f);
+            return chunk;
+        }
+
+        private static void AddObstacleToChunk(Transform chunkTransform, float laneX, float localZ)
+        {
+            var obs = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            obs.name = "Obstacle";
+            obs.transform.SetParent(chunkTransform, false);
+            obs.transform.localPosition = new Vector3(laneX, 0.65f, localZ);
+            obs.transform.localScale = new Vector3(1.8f, 1.3f, 2.8f);
+            obs.AddComponent<PrototypeObstacle>();
+            var col = obs.GetComponent<BoxCollider>();
+            col.center = Vector3.zero;
+            col.size = Vector3.one;
+            obs.GetComponent<Renderer>().sharedMaterial = CreateMaterial("Obstacle_Mat", new Color(0.96f, 0.3f, 0.2f));
+        }
+
+        private static void SetFloat(Object target, string fieldName, float value)
+        {
+            var serializedObject = new SerializedObject(target);
+            var property = serializedObject.FindProperty(fieldName);
+            property.floatValue = value;
+            serializedObject.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void SetObjectReferenceArray(Object target, string fieldName, GameObject[] values)
+        {
+            var serializedObject = new SerializedObject(target);
+            var property = serializedObject.FindProperty(fieldName);
+            property.arraySize = values.Length;
+            for (int i = 0; i < values.Length; i++)
+            {
+                property.GetArrayElementAtIndex(i).objectReferenceValue = values[i];
+            }
+
+            serializedObject.ApplyModifiedPropertiesWithoutUndo();
         }
 
         private static GameObject CreateCarObstaclePrefab()
