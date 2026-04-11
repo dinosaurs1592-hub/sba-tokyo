@@ -407,6 +407,7 @@ namespace SBATokyo.Prototype.Editor
             chunk.transform.SetParent(parent, false);
             var controller = chunk.AddComponent<ChunkController>();
             SetFloat(controller, "chunkLength", 36f);
+            AddChunkGround(chunk.transform);
             return chunk;
         }
 
@@ -416,7 +417,7 @@ namespace SBATokyo.Prototype.Editor
             chunk.transform.SetParent(parent, false);
             var controller = chunk.AddComponent<ChunkController>();
             SetFloat(controller, "chunkLength", 36f);
-
+            AddChunkGround(chunk.transform);
             AddObstacleToChunk(chunk.transform, -3f, 10f);
             AddObstacleToChunk(chunk.transform, 3f, 22f);
             AddObstacleToChunk(chunk.transform, 0f, 30f);
@@ -429,6 +430,7 @@ namespace SBATokyo.Prototype.Editor
             chunk.transform.SetParent(parent, false);
             var controller = chunk.AddComponent<ChunkController>();
             SetFloat(controller, "chunkLength", 36f);
+            AddChunkGround(chunk.transform);
 
             var rail = GameObject.CreatePrimitive(PrimitiveType.Cube);
             rail.name = "Rail";
@@ -447,6 +449,7 @@ namespace SBATokyo.Prototype.Editor
             chunk.transform.SetParent(parent, false);
             var controller = chunk.AddComponent<ChunkController>();
             SetFloat(controller, "chunkLength", 36f);
+            AddChunkGround(chunk.transform);
 
             var platform = GameObject.CreatePrimitive(PrimitiveType.Cube);
             platform.name = "Platform";
@@ -468,6 +471,7 @@ namespace SBATokyo.Prototype.Editor
             chunk.transform.SetParent(parent, false);
             var controller = chunk.AddComponent<ChunkController>();
             SetFloat(controller, "chunkLength", 36f);
+            AddChunkGround(chunk.transform);
 
             var rail = GameObject.CreatePrimitive(PrimitiveType.Cube);
             rail.name = "Rail";
@@ -481,6 +485,17 @@ namespace SBATokyo.Prototype.Editor
             AddObstacleToChunk(chunk.transform, -3f, 8f);
             AddObstacleToChunk(chunk.transform, 3f, 26f);
             return chunk;
+        }
+
+        private static void AddChunkGround(Transform chunkTransform)
+        {
+            var ground = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            ground.name = "Ground";
+            ground.transform.SetParent(chunkTransform, false);
+            ground.transform.localPosition = new Vector3(0f, -0.1f, 18f);
+            ground.transform.localScale = new Vector3(10.5f, 0.2f, 36f);
+            ground.AddComponent<PrototypeSurface>();
+            ground.GetComponent<Renderer>().sharedMaterial = CreateMaterial("Ground_Mat", new Color(0.17f, 0.19f, 0.23f));
         }
 
         private static void AddObstacleToChunk(Transform chunkTransform, float laneX, float localZ)
