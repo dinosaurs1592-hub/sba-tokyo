@@ -4,8 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-SBA Tokyo — 3D mobile endless runner prototype built in Unity 6000.4.1f1 with URP 17.4.0.  
-Active scene: `Assets/Scenes/RunnerPrototype.unity`
+SBA Tokyo — 3D mobile endless runner built in Unity 6000.4.1f1 with URP 17.4.0.  
+Active scene: `Assets/Scenes/GameScene.unity`
 
 ## Operating Model
 
@@ -23,7 +23,7 @@ Label suggestions as `Optional`, `Recommended`, or `Urgent`.
 This is a Unity project — there is no CLI build or test command. All iteration happens inside the Unity Editor.
 
 - Open the project in Unity `6000.4.1f1`
-- Use **SBA Tokyo → Build Prototype Scene** (menu) to regenerate the scene via `PrototypeSceneBuilder.cs`
+- Use **SBA Tokyo → Build Game Scene** (menu) to regenerate the scene via `SBASceneBuilder.cs`
 - Play in the Editor with keyboard fallback (see Input below)
 - No automated test suite exists yet; validation is manual playtest against `docs/specs/prototype_gdd.md`
 
@@ -32,38 +32,43 @@ This is a Unity project — there is no CLI build or test command. All iteration
 ### Namespaces and folders
 
 ```
-SBATokyo.Prototype.Core      →  Assets/Scripts/Core/
-SBATokyo.Prototype.Gameplay  →  Assets/Scripts/Gameplay/
-(UI scripts live in)         →  Assets/Scripts/UI/
+SBATokyo.Core      →  Assets/Scripts/Core/      (SBAGameManager, SBAInputManager, PlayerState)
+SBATokyo.Gameplay  →  Assets/Scripts/Gameplay/  (RunnerController, CameraFollow, RoadSurface,
+                                                  Obstacle, ChunkSpawner, ChunkController,
+                                                  SurfaceType, LandingActionType)
+SBATokyo.UI        →  Assets/Scripts/UI/        (GameHUD)
 ```
+
+`Assets/Scripts/Archive/` contains the original `Prototype*` scripts for reference only.
 
 ### Data flow
 
 ```
-PrototypeInputManager  →  events  →  PrototypeRunnerController
-                                   →  PrototypeGameManager (Push, Restart)
+SBAInputManager  →  events  →  RunnerController
+                            →  SBAGameManager (Push, Restart)
 
-PrototypeRunnerController  →  PrototypeGameManager.RegisterLandingResult()
-                           →  PrototypeGameManager.SetState()
+RunnerController  →  SBAGameManager.RegisterLandingResult()
+                  →  SBAGameManager.SetState()
 
-PrototypeGameManager  →  events (RunReset, GameOverTriggered)  →  ChunkSpawner, HUD
+SBAGameManager  →  events (RunReset, GameOverTriggered)  →  ChunkSpawner, GameHUD
 ```
 
-`PrototypeGameManager` owns all authoritative game state (speed, score, combo, `PlayerState`).  
-`PrototypeRunnerController` owns all physical movement and landing window logic.  
+`SBAGameManager` owns all authoritative game state (speed, score, combo, `PlayerState`).  
+`RunnerController` owns all physical movement and surface detection.  
 These two never call each other's setters except through the defined public API.
 
 ### Key design contracts
 
-- **Landing window**: `PrototypeRunnerController` buffers a `PrototypeLandingActionType` pre-jump and passes it with `elapsedSinceLanding` to `GameManager.RegisterLandingResult()` on landing. The manager decides success based on surface type.
-- **Surface typing**: `PrototypeSurface` component on scene objects carries a `PrototypeSurfaceType`. `RunnerController` reads it via downward raycast (`ProbeGround`). Rail surfaces pause speed decay and set `PlayerState.Grinding`.
-- **Chunk pooling**: `ChunkSpawner` pools pre-designed chunk prefabs (ChunkFlat, ChunkObstacleRun, ChunkRailSection, ChunkObjectPlatform, ChunkMixed). Each chunk is managed by `ChunkController`. Reset via `RunReset` event.
+- **Landing window**: `RunnerController` buffers a `LandingActionType` pre-jump and passes it with `elapsedSinceLanding` to `SBAGameManager.RegisterLandingResult()` on landing.
+- **Surface typing**: `RoadSurface` component on scene objects carries a `SurfaceType`. `RunnerController` reads it via downward raycast (`ProbeGround`). Rail surfaces pause speed decay and set `PlayerState.Grinding`.
+- **Chunk pooling**: `ChunkSpawner` references real `.prefab` assets in `Assets/Prefabs/Chunks/`. Each chunk is managed by `ChunkController`. Reset via `RunReset` event.
+- **Scene builder**: `SBASceneBuilder` saves chunk prefabs via `PrefabUtility.SaveAsPrefabAsset()` before scene creation, ensuring `Instantiate` works correctly in Play mode.
 - **Speed decay**: passive decay starts after `idleDecayDelay` seconds of no push. Rails pause decay. Game over when speed reaches 0.
 
 ### Forward-compatibility notes (do not remove)
 
-- `PlayerState` enum must remain the stable contract for full SBA Tokyo expansion (`Airborne`, `Grinding`, `LandingWindow` are already live).
-- `PrototypeSurfaceType` (`Ground`, `Object`, `Rail`, `Obstacle`) must not be renamed; future landing rules branch on these values.
+- `PlayerState` enum must remain stable (`Airborne`, `Grinding`, `LandingWindow` are live).
+- `SurfaceType` (`Ground`, `Object`, `Rail`, `Obstacle`) must not be renamed; landing rules branch on these values.
 
 ## Input Reference (Editor)
 
@@ -80,23 +85,22 @@ Mouse drag (60px minimum) also works in editor: horizontal = lane change, swipe 
 
 ## Tuning Baselines
 
-Defined in `PrototypeGameManager` inspector fields and documented in `docs/specs/prototype_gdd.md`.  
-Change values in the Inspector; do not hardcode them in other scripts.
+Defined in `SBAGameManager` inspector fields. Change values in the Inspector; do not hardcode them.
 
 | Parameter | Default |
 |---|---|
-| Start speed | 8.0 |
-| Max speed | 20.0 |
-| Push amount | 2.0 |
-| Idle decay delay | 1.0 s |
-| Speed decay/sec | 2.0 |
+| Start speed | 24.0 |
+| Max speed | 52.0 |
+| Push amount | 6.0 |
+| Idle decay delay | 1.2 s |
+| Speed decay/sec | 3.4 |
 | Landing window | 0.15 s |
 | Perfect window | 0.08 s |
 
 ## Document Map
 
 - `AGENTS.md` — operating rules and harness entrypoint
-- `docs/specs/prototype_gdd.md` — in-scope features and success criteria
+- `docs/contracts/2026-04-14-sba-tokyo-rebuild.md` — rebuild design contract
+- `docs/specs/prototype_gdd.md` — feature specs (still valid for mechanics reference)
 - `docs/specs/full_game_3d_roadmap.md` — 3-phase production roadmap
-- `docs/plans/prototype_plan.md` — milestone breakdown (M1–M4 complete)
 - `docs/reports/` — QA notes and status reports

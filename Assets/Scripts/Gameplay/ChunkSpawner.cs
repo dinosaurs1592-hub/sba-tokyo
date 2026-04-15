@@ -1,12 +1,12 @@
 using System.Collections.Generic;
-using SBATokyo.Prototype.Core;
+using SBATokyo.Core;
 using UnityEngine;
 
-namespace SBATokyo.Prototype.Gameplay
+namespace SBATokyo.Gameplay
 {
     public class ChunkSpawner : MonoBehaviour
     {
-        [SerializeField] private PrototypeGameManager gameManager;
+        [SerializeField] private SBAGameManager gameManager;
         [SerializeField] private Transform runner;
         [SerializeField] private GameObject[] chunkPrefabs;
         [SerializeField] private int poolSizePerChunk = 3;
@@ -19,24 +19,17 @@ namespace SBATokyo.Prototype.Gameplay
 
         private void Start()
         {
-            if (chunkPrefabs == null || chunkPrefabs.Length == 0)
-            {
-                return;
-            }
+            if (chunkPrefabs == null || chunkPrefabs.Length == 0) return;
 
             foreach (var prefab in chunkPrefabs)
             {
                 for (int i = 0; i < poolSizePerChunk; i++)
                 {
                     var instance = Instantiate(prefab, new Vector3(0f, -200f, 0f), Quaternion.identity);
-                    var controller = instance.GetComponent<ChunkController>();
-                    if (controller == null)
-                    {
-                        controller = instance.AddComponent<ChunkController>();
-                    }
-
+                    var ctrl = instance.GetComponent<ChunkController>()
+                               ?? instance.AddComponent<ChunkController>();
                     instance.SetActive(false);
-                    pool.Add(controller);
+                    pool.Add(ctrl);
                 }
             }
 
@@ -46,46 +39,28 @@ namespace SBATokyo.Prototype.Gameplay
 
         private void OnEnable()
         {
-            if (gameManager != null)
-            {
-                gameManager.RunReset += HandleRunReset;
-            }
+            if (gameManager != null) gameManager.RunReset += HandleRunReset;
         }
 
         private void OnDisable()
         {
-            if (gameManager != null)
-            {
-                gameManager.RunReset -= HandleRunReset;
-            }
+            if (gameManager != null) gameManager.RunReset -= HandleRunReset;
         }
 
         private void Update()
         {
-            if (gameManager == null || runner == null || gameManager.IsGameOver)
-            {
-                return;
-            }
-
+            if (runner == null || gameManager == null || gameManager.IsGameOver) return;
             RecyclePassedChunks();
             SpawnUntilAhead();
         }
 
         private void SpawnUntilAhead()
         {
-            if (runner == null)
-            {
-                return;
-            }
-
+            if (runner == null) return;
             while (nextSpawnZ < runner.position.z + spawnDistanceAhead)
             {
-                var chunk = GetChunkFromPool();
-                if (chunk == null)
-                {
-                    break;
-                }
-
+                var chunk = GetFromPool();
+                if (chunk == null) break;
                 chunk.Activate(nextSpawnZ);
                 activeChunks.Add(chunk);
                 nextSpawnZ += chunk.ChunkLength;
@@ -105,16 +80,12 @@ namespace SBATokyo.Prototype.Gameplay
             }
         }
 
-        private ChunkController GetChunkFromPool()
+        private ChunkController GetFromPool()
         {
-            if (pool.Count == 0)
-            {
-                return null;
-            }
-
-            int index = Random.Range(0, pool.Count);
-            var chunk = pool[index];
-            pool.RemoveAt(index);
+            if (pool.Count == 0) return null;
+            int idx = Random.Range(0, pool.Count);
+            var chunk = pool[idx];
+            pool.RemoveAt(idx);
             return chunk;
         }
 
@@ -125,7 +96,6 @@ namespace SBATokyo.Prototype.Gameplay
                 chunk.Deactivate();
                 pool.Add(chunk);
             }
-
             activeChunks.Clear();
             nextSpawnZ = 0f;
             SpawnUntilAhead();

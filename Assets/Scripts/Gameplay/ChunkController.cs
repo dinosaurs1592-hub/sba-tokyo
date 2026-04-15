@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace SBATokyo.Prototype.Gameplay
+namespace SBATokyo.Gameplay
 {
     public class ChunkController : MonoBehaviour
     {
