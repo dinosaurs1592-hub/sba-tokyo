@@ -22,10 +22,15 @@ Claude Code がこのリポジトリで作業する際の運用ルール。
 
 | モデル | 役割 | 使い所 |
 |---|---|---|
-| **Opus**(司令塔) | Planner / 重要 Builder / 最終判断 | 設計、複雑な実装、コードレビュー |
-| **Sonnet** | 標準 Builder | Task サブエージェントで通常実装・リファクタ |
-| **Gemini Flash** | 調査 / 要約 | アセット検索、ログ要約、`ccr code` 経由 |
-| **DeepSeek**(将来) | Evaluator / think 系 | 独立検証、MCP 経由で追加予定 |
+| **Opus 4.7**(司令塔) | Planner / 重要 Builder / 最終判断 | 設計、複雑な実装、コードレビュー |
+| **Sonnet 4.6** | メイン Builder | Task サブエージェントで通常実装・リファクタ |
+| **DeepSeek-V3** (`deepseek-chat`) | 副 Builder / クロスチェック | 独立アーキの実装で Claude 生成コードを比較検証。コスト感度の高い Builder タスク(Sonnet の 1/10 価格帯) |
+| **DeepSeek-R1** (`deepseek-reasoner`) | Evaluator / think | 推論検証、プラン妥当性チェック、難バグの論理追跡 |
+| **Gemini Flash 2.5** | 雑務 / 要約 | アセット検索、ログ要約、`ccr code` 経由 |
+
+> DeepSeek は MCP 経由で接続(`.mcp.json` 参照)。`mcp-deepseek` の `chat` ツールで `model` 引数にモデル ID を指定して呼び分け。
+>
+> **DeepSeek-Coder は廃止済み** — V2.5(2024-09)で `deepseek-chat`(V3 系)に統合された。コード特化能力は V3 が継承。
 
 ---
 
@@ -71,6 +76,7 @@ main(保護)
 | `AGENTS.md` | 本ファイル(プロセス) |
 | `CLAUDE.md` | 技術ガイド(アーキテクチャ・入力・チューニング) |
 | `~/.claude/settings.json` | 禁止事項・許可コマンド |
+| `.mcp.json` | MCP サーバ設定(DeepSeek 等) |
 | `.github/workflows/validate.yml` | CI 検証項目 |
 | `docs/specs/` | ゲーム仕様 |
 | `docs/plans/` | ロードマップ |
