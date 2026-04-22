@@ -33,3 +33,9 @@ Thumbs.db
 # Crash reports
 sysinfo.txt
 
+# Secrets (.mcp.json uses ${ENV_VAR} interpolation; never commit raw keys)
+.env
+.env.*
+*.local.json
+secrets/
+
