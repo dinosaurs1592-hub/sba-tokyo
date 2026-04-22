@@ -1,88 +1,47 @@
 # AGENTS.md
 
-Claude Code がこのリポジトリで作業する際の運用ルールです。
+Claude Code がこのリポジトリで作業する際の運用ルール。
 
-## ハーネス設計
-
-Anthropic の公式研究に基づく **Planner → Builder → Evaluator** パターンを採用します。
-
-エージェントは自分の成果を自画自賛しがちです。独立した Evaluator を設けることで、この認知バイアスを排除します。
+> **禁止事項は `~/.claude/settings.json` に、CI 検証項目は `.github/workflows/validate.yml` に集約している。本ファイルはプロセス設計のみを扱う。**
 
 ---
 
-## シングルエージェント vs マルチエージェント
+## ハーネス: Planner → Builder → Evaluator
 
-**シングルエージェントで対応する（デフォルト）：**
-- 1〜2ファイルの修正
-- 調査・説明・提案のみ
+エージェントは自分の成果を自画自賛しがち。独立した Evaluator を置くことで認知バイアスを排除する。
 
-**マルチエージェント（サブエージェント）を使う：**
-- 複数ファイルにまたがる実装
-- 大規模な調査（Explore サブエージェントに委譲してメインコンテキストを保護）
-- 独立した検証が必要な場合
-
-マルチエージェントはトークンを 3〜10 倍消費します。必要な時だけ使います。
+| 役割 | 担当 | 責務 |
+|---|---|---|
+| **Planner** | Claude(`EnterPlanMode`) | `docs/contracts/` に契約書作成、成功基準定義、President 承認 |
+| **Builder** | Claude(メインエージェント) | 契約スコープ厳守、PR 作成 |
+| **Evaluator** | Claude(サブエージェント) | 成功基準を ○/✗ 判定、未検証は「未確認」と正直に報告 |
 
 ---
 
-## 役割定義
+## チーム編成(モデル別役割)
 
-### Planner（計画フェーズ）
-
-**担当：** Claude Code（`EnterPlanMode` を使用）
-
-- 作業を開始する前に `docs/contracts/` に実装契約書を作成する
-- 変更するファイルと変更しないファイルを明示する
-- Evaluator が使う **測定可能な成功基準** を定義する
-- President（ユーザー）の承認を得てから Builder フェーズに移行する
-
-### Builder（実装フェーズ）
-
-**担当：** Claude Code（メインエージェント）
-
-- 契約書のスコープを厳守する。スコープ外は実装しない
-- `SerializeField` の値をコードにハードコードしない（Inspector で管理）
-- 前方互換の契約を守る（後述）
-- 完了後、Evaluator チェックリストを添付して PR を作成する
-
-### Evaluator（検証フェーズ）
-
-**担当：** Claude Code（サブエージェントまたは明示的なレビューステップ）
-
-- 「良さそう」という主観的判断をしない
-- 契約書の各成功基準を **○ / ✗** で判定する
-- 未検証の項目は正直に「未確認」と報告する
-- 合格しない基準があれば Builder に差し戻す
+| モデル | 役割 | 使い所 |
+|---|---|---|
+| **Opus**(司令塔) | Planner / 重要 Builder / 最終判断 | 設計、複雑な実装、コードレビュー |
+| **Sonnet** | 標準 Builder | Task サブエージェントで通常実装・リファクタ |
+| **Gemini Flash** | 調査 / 要約 | アセット検索、ログ要約、`ccr code` 経由 |
+| **DeepSeek**(将来) | Evaluator / think 系 | 独立検証、MCP 経由で追加予定 |
 
 ---
 
-## 実装契約書フォーマット
+## 実装契約書
 
 `docs/contracts/YYYY-MM-DD-{タスク名}.md` に保存。
 
-```markdown
-## 目的
+テンプレートと共通成功基準は [`docs/contracts/README.md`](docs/contracts/README.md) を参照。
 
-## 変更するファイル
-- `Assets/Scripts/...`
-
-## 変更しないファイル
-- `Assets/Scripts/Core/PlayerState.cs`（前方互換の契約）
-
-## 成功基準（Evaluator チェックリスト）
-- [ ] ビルドエラーなし
-- [ ] 既存の SerializeField 値が変わっていない
-- [ ] PlayerState / PrototypeSurfaceType の既存値を変更していない
-- [ ] （タスク固有の基準）
-
-## リスク・懸念点
-```
+必須項目:目的 / 変更するファイル / 変更しないファイル / 成功基準(Evaluator チェックリスト)/ リスク。
 
 ---
 
 ## 提案ラベル
 
-コード以外の変更提案には必ずラベルをつける：
+コード以外の提案には必ず付与:
 
 - `Optional` — なくても動く改善
 - `Recommended` — 品質・保守性の向上
@@ -90,28 +49,18 @@ Anthropic の公式研究に基づく **Planner → Builder → Evaluator** パ�
 
 ---
 
-## 前方互換の契約
-
-以下は **変更・削除禁止**。フルゲームへの拡張の土台です。
-
-- `PlayerState` enum の既存値（`Running`, `Airborne`, `Grinding`, `LandingWindow`, `GameOver`）
-- `PrototypeSurfaceType` enum の既存値（`Ground`, `Object`, `Rail`, `Obstacle`）
-
----
-
 ## GitHub ワークフロー
 
 ```
-main（保護ブランチ）
-  └── feat/{機能名}
-  └── fix/{バグ名}
-  └── docs/{ドキュメント名}
+main(保護)
+  └── feat/{機能名}   fix/{バグ名}   docs/{ドキュメント名}
 ```
 
-1. 作業は必ずブランチを切って行う（`main` への直接 push 禁止）
-2. 実装完了後に PR を作成し、Evaluator チェックリストを PR 本文に添付する
-3. コミットは Conventional Commits 形式（`feat:`, `fix:`, `docs:` 等）
-4. PR は President（ユーザー）がマージする
+1. 作業はブランチを切る(`main` 直 push は settings.json で拒否される)
+2. コミットは Conventional Commits(`feat:` / `fix:` / `docs:` / `wip:`)
+3. PR 作成 → Evaluator チェックリストを本文に添付
+4. **マージは Claude が自動実行**:CI green を確認 → `gh pr merge --auto --squash --delete-branch`
+5. President から「マージ待って」の明示があった場合のみ待機
 
 ---
 
@@ -119,9 +68,11 @@ main（保護ブランチ）
 
 | ファイル | 役割 |
 |---|---|
-| `AGENTS.md` | 運用ルール（本ファイル） |
-| `CLAUDE.md` | Claude Code 向け技術ガイド |
-| `docs/specs/` | ゲーム仕様・要件 |
-| `docs/plans/` | マイルストーン計画 |
-| `docs/contracts/` | 実装契約書（Planner が作成） |
-| `docs/reports/` | QA レポート（Evaluator が作成） |
+| `AGENTS.md` | 本ファイル(プロセス) |
+| `CLAUDE.md` | 技術ガイド(アーキテクチャ・入力・チューニング) |
+| `~/.claude/settings.json` | 禁止事項・許可コマンド |
+| `.github/workflows/validate.yml` | CI 検証項目 |
+| `docs/specs/` | ゲーム仕様 |
+| `docs/plans/` | ロードマップ |
+| `docs/contracts/` | 実装契約書 |
+| `docs/reports/` | QA レポート |
